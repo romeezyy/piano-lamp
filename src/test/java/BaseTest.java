@@ -1,9 +1,9 @@
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.testng.annotations.AfterClass;
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeMethod;
 import pages.LobbyPage;
 import pages.StartPage;
 
@@ -11,31 +11,34 @@ import java.time.Duration;
 
 public abstract class BaseTest {
 
-    protected static WebDriver driver;
-    protected static LobbyPage lobbyPage;
-    protected static StartPage startPage;
+    protected static ThreadLocal<WebDriver> driver = ThreadLocal.withInitial(() -> {
+        WebDriverManager.chromedriver().setup();
+        WebDriver d = new ChromeDriver();
+        d.manage().timeouts().implicitlyWait(Duration.ofSeconds(1));
+        d.manage().window().maximize();
+        return d;
+    });
 
-    @BeforeClass
+    protected static ThreadLocal<LobbyPage> lobbyPage = ThreadLocal.withInitial(() -> new LobbyPage(driver.get()));
+    protected static ThreadLocal<StartPage> startPage = ThreadLocal.withInitial(() -> new StartPage(driver.get()));
+
+    @BeforeAll
     public static void setup() {
         WebDriverManager.chromedriver().setup();
-        driver = new ChromeDriver();
-        driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(1));
-        driver.manage().window().maximize();
-        lobbyPage = new LobbyPage(driver);
-        startPage = new StartPage(driver);
+
 
     }
 
-    @BeforeMethod
+    @BeforeEach
     public void setupTestData() {
-        driver.manage().deleteAllCookies();
-        startPage.openStartPage();
+        driver.get().manage().deleteAllCookies();
+        startPage.get().openStartPage();
     }
 
-    @AfterClass(alwaysRun = true)
+    @AfterEach
     public void tearDown() {
-        if (driver != null) {
-            driver.quit();
+        if (driver.get() != null) {
+            driver.get().quit();
         }
     }
 }
