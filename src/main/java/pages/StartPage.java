@@ -1,22 +1,18 @@
 package pages;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.support.FindBy;
-import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.*;
 
-import java.time.Duration;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+
+import static pages.LobbyPage.PIANO_LOCATOR;
 
 public class StartPage extends BasePage<StartPage> {
 
     public StartPage(WebDriver driver) {
         super(driver);
-        PageFactory.initElements(driver, this);
     }
 
-    @FindBy(xpath = "//div[@class='notif success']")
-    private WebElement successNotificator;
+    public static final String SUCCESS_NOTIFICATOR = "//div[@class='notif success']";
     public static final String CREATE_ROOM_BUTTON = "//div[@class='create']";
     public static final String ROOM_PASSWORD_FIELD = "//input[@placeholder='ROOM PASSWORD (OPTIONAL)']";
     public static final String PASSWORD = "778234";
@@ -25,23 +21,48 @@ public class StartPage extends BasePage<StartPage> {
             "/following-sibling::div//span[@class='slider slider-accent']";
 
     public void createNewRoom(String password) {
-        driver.findElement(By.xpath(CREATE_ROOM_BUTTON)).click();
-        driver.findElement(By.xpath(ROOM_PASSWORD_FIELD)).sendKeys(password);
-        WebElement checkbox = driver.findElement(By.xpath(ALLOW_SPECTATORS_CHECKBOX));
-        if (checkbox.isSelected()) {
-            checkbox.click();
+        boolean isLobbyCreated = false;
+        int attempts = 0;
+        do {
+            attempts++;
+            if (attempts > 1) {
+                resetAndRefreshBrowserState();
+                wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath(SUCCESS_NOTIFICATOR)));
+            }
+            driver.findElement(By.xpath(CREATE_ROOM_BUTTON)).click();
+            wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath(ROOM_PASSWORD_FIELD))).sendKeys(password);
+            WebElement checkbox = driver.findElement(By.xpath(ALLOW_SPECTATORS_CHECKBOX));
+            if (checkbox.isSelected()) {
+                checkbox.click();
+            }
+            wait.until(ExpectedConditions.elementToBeClickable(By.xpath(FINAL_CREATE_BUTTON))).click();
+            try {
+                if (driver.findElement(By.xpath(PIANO_LOCATOR)).isDisplayed()) {
+                    isLobbyCreated = true;
+                }
+            } catch (NoSuchElementException e) {
+                System.out.println("The server was unable to process the request to create a lobby. Number of attempts remaining: " + (5 - attempts));
+            }
         }
-        try {
-            Thread.sleep(Duration.ofSeconds(1));
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        driver.findElement(By.xpath(FINAL_CREATE_BUTTON)).click();
+        while (!isLobbyCreated && attempts < 5);
+        if (isLobbyCreated) {
+            System.out.println("Test lobby successfully created.");
+        } else System.out.println("The lobby could not be created after 5 attempts.");
+    }
+
+    public void resetAndRefreshBrowserState() {
+        JavascriptExecutor js = (JavascriptExecutor) driver;
+        driver.manage().deleteAllCookies();
+        js.executeScript("window.localStorage.clear();");
+        js.executeScript("window.sessionStorage.clear();");
+        driver.navigate().refresh();
+        System.out.println("Cleaning is complete, page is prepared for the next attempt.");
+
     }
 
     @Override
     public StartPage waitForPageToLoad() {
-        waitElementToBeVisible(successNotificator);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(By.xpath(SUCCESS_NOTIFICATOR)));
         return this;
     }
 
