@@ -17,8 +17,7 @@ public class StartPage extends BasePage<StartPage> {
     public static final String ROOM_PASSWORD_FIELD = "//input[@placeholder='ROOM PASSWORD (OPTIONAL)']";
     public static final String PASSWORD = "778234";
     public static final String FINAL_CREATE_BUTTON = "//div[@class='button button-accent' and text()=' CREATE ']";
-    public static final String ALLOW_SPECTATORS_CHECKBOX = "//div[text()='Allow spectators to join without password']" +
-            "/following-sibling::div//span[@class='slider slider-accent']";
+    public static final String ALLOW_SPECTATORS_CHECKBOX = "//div[text()='Allow spectators to join without password']" + "/following-sibling::div//span[@class='slider slider-accent']";
 
     public void createNewRoom(String password) {
         boolean isLobbyCreated = false;
@@ -35,7 +34,10 @@ public class StartPage extends BasePage<StartPage> {
             if (checkbox.isSelected()) {
                 checkbox.click();
             }
-            wait.until(ExpectedConditions.elementToBeClickable(By.xpath(FINAL_CREATE_BUTTON))).click();
+            WebElement finalCreate = driver.findElement(By.xpath(FINAL_CREATE_BUTTON));
+            wait.until(ExpectedConditions.visibilityOf(finalCreate));
+            JavascriptExecutor js = (JavascriptExecutor) driver;
+            js.executeScript("arguments[0].click();", finalCreate);
             try {
                 if (driver.findElement(By.xpath(PIANO_LOCATOR)).isDisplayed()) {
                     isLobbyCreated = true;
@@ -43,8 +45,7 @@ public class StartPage extends BasePage<StartPage> {
             } catch (NoSuchElementException e) {
                 System.out.println("The server was unable to process the request to create a lobby. Number of attempts remaining: " + (5 - attempts));
             }
-        }
-        while (!isLobbyCreated && attempts < 5);
+        } while (!isLobbyCreated && attempts < 5);
         if (isLobbyCreated) {
             System.out.println("Test lobby successfully created.");
         } else System.out.println("The lobby could not be created after 5 attempts.");
